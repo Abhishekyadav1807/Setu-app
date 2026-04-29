@@ -435,6 +435,19 @@ img {
   .page-header h1 {
     font-size: 24px;
   }
+
+  .floating-chat-btn {
+    right: 12px !important;
+    bottom: 12px !important;
+    padding: 9px 11px !important;
+    font-size: 12px !important;
+    max-width: 140px;
+    text-align: center;
+  }
+
+  iframe {
+    height: 60vh !important;
+  }
 }
 
 @media (max-width: 480px) {

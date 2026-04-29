@@ -1,277 +1,104 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// Fallback data so the page works even without backend
-const fallbackLaws = {
-  'constitution-basics': {
-    title: 'Constitution of India – Basics', category: 'Constitutional Law',
-    overview: 'The Constitution of India is the supreme law of India. Adopted on 26 November 1949 and effective from 26 January 1950, it establishes the framework for political principles, procedures, rights, and duties. It guarantees Fundamental Rights including Right to Equality, Right to Freedom, Right against Exploitation, Right to Freedom of Religion, Cultural and Educational Rights, and Right to Constitutional Remedies.',
-    keySections: [
-      { section: 'Part III (Articles 12-35)', title: 'Fundamental Rights', description: 'Guarantees six fundamental rights to all citizens including equality before law, freedom of speech, protection against exploitation, and right to constitutional remedies.' },
-      { section: 'Article 21', title: 'Right to Life and Personal Liberty', description: 'No person shall be deprived of life or personal liberty except according to procedure established by law. Includes right to live with dignity, right to livelihood, health, education, clean environment, and privacy.' },
-      { section: 'Article 32', title: 'Right to Constitutional Remedies', description: 'Citizens can directly approach the Supreme Court for enforcement of fundamental rights through writs: Habeas Corpus, Mandamus, Prohibition, Certiorari, and Quo Warranto.' },
-    ],
-    examples: [
-      { title: 'Right to Education', scenario: 'A poor family cannot afford school fees.', outcome: 'Under Article 21A, every child aged 6-14 has the right to free and compulsory education. 25% seats in private schools are reserved for EWS.' },
-      { title: 'Right to Information', scenario: 'A citizen wants to know how government funds were spent.', outcome: 'Under RTI Act 2005, any citizen can seek information from any public authority by paying ₹10 fee.' },
-    ],
-    useCases: [
-      { title: 'Filing PIL', description: 'Any citizen can file a PIL in High Court (Article 226) or Supreme Court (Article 32) for enforcement of fundamental rights.' },
-      { title: 'Seeking Legal Aid', description: 'Article 39A provides for free legal aid. NALSA and state LSAs provide free lawyers and waive court fees.' },
-    ],
-    importantLinks: [
-      { label: 'Constitution of India (Full Text)', url: 'https://legislative.gov.in/constitution-of-india/' },
-      { label: 'Supreme Court of India', url: 'https://main.sci.gov.in/' },
-    ]
+const labels = {
+  en: { back: '<- Back to Legal Knowledge', notFound: 'Law not found', overview: 'Overview', key: 'Key Sections', ex: 'Real-World Examples', use: 'Practical Use Cases', links: 'Official Links', scenario: 'Scenario', outcome: 'Outcome' },
+  hi: { back: '<- कानूनी जानकारी पर वापस', notFound: 'कानून नहीं मिला', overview: 'सारांश', key: 'मुख्य धाराएँ', ex: 'वास्तविक उदाहरण', use: 'व्यावहारिक उपयोग', links: 'आधिकारिक लिंक', scenario: 'स्थिति', outcome: 'परिणाम' },
+  bho: { back: '<- कानूनी जानकारी पर वापस', notFound: 'कानून ना मिलल', overview: 'सार', key: 'मुख्य धारा', ex: 'वास्तविक उदाहरण', use: 'व्यावहारिक उपयोग', links: 'आधिकारिक लिंक', scenario: 'स्थिति', outcome: 'परिणाम' },
+  bn: { back: '<- আইনি জ্ঞানে ফিরে যান', notFound: 'আইন পাওয়া যায়নি', overview: 'সংক্ষিপ্তসার', key: 'মূল ধারা', ex: 'বাস্তব উদাহরণ', use: 'ব্যবহারিক প্রয়োগ', links: 'অফিসিয়াল লিংক', scenario: 'পরিস্থিতি', outcome: 'ফলাফল' },
+  hinglish: { back: '<- Legal Knowledge pe wapas', notFound: 'Law nahi mila', overview: 'Overview', key: 'Key Sections', ex: 'Real Examples', use: 'Practical Use Cases', links: 'Official Links', scenario: 'Scenario', outcome: 'Outcome' },
+};
+
+const lawsByLang = {
+  en: {
+    'constitution-basics': { title: 'Constitution of India - Basics', category: 'Constitutional Law', overview: 'The Constitution is the supreme law of India and guarantees fundamental rights and constitutional remedies.', keySections: [{ section: 'Part III', title: 'Fundamental Rights', description: 'Equality, freedom, religion, and constitutional remedies.' }], examples: [{ title: 'Right to Education', scenario: 'Child cannot afford school fees.', outcome: 'Free and compulsory education right applies.' }], useCases: [{ title: 'Public Interest Litigation', description: 'Citizens can seek court intervention for rights violations.' }], importantLinks: [{ label: 'Constitution of India', url: 'https://legislative.gov.in/constitution-of-india/' }] },
+    'consumer-protection-act': { title: 'Consumer Protection Act, 2019', category: 'Consumer Law', overview: 'Protects consumers from unfair trade practices and defective goods/services.', keySections: [{ section: 'Section 34-37', title: 'Dispute Redressal', description: 'District, State and National redressal commissions.' }], examples: [{ title: 'Defective Product', scenario: 'Product fails soon after purchase.', outcome: 'Consumer can seek refund/replacement and compensation.' }], useCases: [{ title: 'Online Shopping Disputes', description: 'Complaint against non-delivery or wrong product.' }], importantLinks: [{ label: 'E-Daakhil Portal', url: 'https://edaakhil.nic.in/' }] },
+    'it-act': { title: 'Information Technology Act, 2000', category: 'Cyber Law', overview: 'Primary law for cybercrime and electronic transactions in India.', keySections: [{ section: 'Section 66', title: 'Computer Offences', description: 'Hacking and misuse are punishable offences.' }], examples: [{ title: 'UPI Fraud', scenario: 'Fraud after OTP sharing.', outcome: 'Report at 1930 and cybercrime portal immediately.' }], useCases: [{ title: 'Cyber Complaint', description: 'Report online and preserve digital evidence.' }], importantLinks: [{ label: 'Cyber Crime Portal', url: 'https://cybercrime.gov.in/' }] },
+    'labour-laws': { title: 'Labour Laws in India', category: 'Employment Law', overview: 'Labour codes cover wages, social security, safety and industrial relations.', keySections: [{ section: 'Code on Wages', title: 'Minimum Wages', description: 'Ensures minimum wage and equal remuneration.' }], examples: [{ title: 'Salary Delay', scenario: 'Salary unpaid for months.', outcome: 'Worker can complain to labour authorities.' }], useCases: [{ title: 'PF/ESI Rights', description: 'Employees can claim social security benefits.' }], importantLinks: [{ label: 'EPFO Portal', url: 'https://unifiedportal-mem.epfindia.gov.in/' }] },
+    'property-rent-laws': { title: 'Property & Rent Laws', category: 'Property Law', overview: 'Covers registration, RERA compliance and tenancy rights.', keySections: [{ section: 'RERA 2016', title: 'Real Estate Regulation', description: 'Promoter accountability and buyer remedies.' }], examples: [{ title: 'Builder Delay', scenario: 'Possession delayed by builder.', outcome: 'Buyer can file RERA complaint.' }], useCases: [{ title: 'Rent Agreement', description: 'Written agreements reduce disputes.' }], importantLinks: [{ label: 'RERA Portal', url: 'https://maharera.mahaonline.gov.in/' }] },
   },
-  'consumer-protection-act': {
-    title: 'Consumer Protection Act, 2019', category: 'Consumer Law',
-    overview: 'The Consumer Protection Act 2019 provides stronger protection for consumers in India. It establishes a three-tier quasi-judicial mechanism and covers goods, services, and e-commerce. It introduces product liability, regulates misleading advertisements, and establishes the CCPA.',
-    keySections: [
-      { section: 'Section 34-37', title: 'Consumer Disputes Redressal', description: 'Three-tier structure: District (up to ₹1 Crore), State (₹1-10 Crore), National (above ₹10 Crore).' },
-      { section: 'Section 82-87', title: 'Product Liability', description: 'Manufacturers, sellers are liable for harm caused by defective products.' },
-    ],
-    examples: [
-      { title: 'Defective Product', scenario: 'A mobile phone stops working after 3 days.', outcome: 'Consumer can file complaint on edaakhil.nic.in and claim refund, replacement, and compensation.' },
-    ],
-    useCases: [
-      { title: 'Online Shopping Disputes', description: 'File complaints against e-commerce platforms for defective products or non-delivery.' },
-    ],
-    importantLinks: [
-      { label: 'E-Daakhil Portal', url: 'https://edaakhil.nic.in/' },
-    ]
+  hi: {
+    'constitution-basics': { title: 'भारत का संविधान - मूल बातें', category: 'संवैधानिक कानून', overview: 'संविधान भारत का सर्वोच्च कानून है और नागरिकों को मौलिक अधिकार देता है।', keySections: [{ section: 'भाग III', title: 'मौलिक अधिकार', description: 'समानता, स्वतंत्रता, धर्म और संवैधानिक उपचार से जुड़े अधिकार।' }], examples: [{ title: 'शिक्षा का अधिकार', scenario: 'बच्चा फीस नहीं दे सकता।', outcome: 'निःशुल्क और अनिवार्य शिक्षा का अधिकार लागू होता है।' }], useCases: [{ title: 'जनहित याचिका', description: 'अधिकार हनन पर नागरिक न्यायालय जा सकते हैं।' }], importantLinks: [{ label: 'भारत का संविधान', url: 'https://legislative.gov.in/constitution-of-india/' }] },
+    'consumer-protection-act': { title: 'उपभोक्ता संरक्षण अधिनियम, 2019', category: 'उपभोक्ता कानून', overview: 'अनुचित व्यापार और खराब वस्तु/सेवा से उपभोक्ता को सुरक्षा देता है।', keySections: [{ section: 'धारा 34-37', title: 'विवाद निवारण', description: 'जिला, राज्य और राष्ट्रीय स्तर पर शिकायत निवारण।' }], examples: [{ title: 'खराब उत्पाद', scenario: 'खरीद के बाद उत्पाद खराब हो गया।', outcome: 'रिफंड, रिप्लेसमेंट और मुआवजा मांगा जा सकता है।' }], useCases: [{ title: 'ऑनलाइन खरीद विवाद', description: 'गलत/न पहुंचा उत्पाद पर शिकायत।' }], importantLinks: [{ label: 'ई-दाखिल पोर्टल', url: 'https://edaakhil.nic.in/' }] },
+    'it-act': { title: 'सूचना प्रौद्योगिकी अधिनियम, 2000', category: 'साइबर कानून', overview: 'भारत में साइबर अपराध और डिजिटल लेन-देन का प्रमुख कानून।', keySections: [{ section: 'धारा 66', title: 'कंप्यूटर अपराध', description: 'हैकिंग और दुरुपयोग दंडनीय अपराध हैं।' }], examples: [{ title: 'UPI धोखाधड़ी', scenario: 'OTP साझा करने के बाद धोखाधड़ी।', outcome: 'तुरंत 1930 और साइबर पोर्टल पर शिकायत करें।' }], useCases: [{ title: 'साइबर शिकायत', description: 'ऑनलाइन शिकायत दर्ज करें और डिजिटल सबूत सुरक्षित रखें।' }], importantLinks: [{ label: 'साइबर क्राइम पोर्टल', url: 'https://cybercrime.gov.in/' }] },
+    'labour-laws': { title: 'भारत में श्रम कानून', category: 'रोज़गार कानून', overview: 'श्रम कानून वेतन, सामाजिक सुरक्षा, सुरक्षा और औद्योगिक संबंध कवर करते हैं।', keySections: [{ section: 'वेज कोड', title: 'न्यूनतम वेतन', description: 'न्यूनतम वेतन और समान भुगतान सुनिश्चित करता है।' }], examples: [{ title: 'वेतन में देरी', scenario: 'कई महीनों से वेतन नहीं मिला।', outcome: 'श्रम विभाग में शिकायत की जा सकती है।' }], useCases: [{ title: 'PF/ESI अधिकार', description: 'कर्मचारी सामाजिक सुरक्षा लाभ का दावा कर सकते हैं।' }], importantLinks: [{ label: 'EPFO पोर्टल', url: 'https://unifiedportal-mem.epfindia.gov.in/' }] },
+    'property-rent-laws': { title: 'संपत्ति और किराया कानून', category: 'संपत्ति कानून', overview: 'पंजीकरण, RERA अनुपालन और किरायेदारी अधिकारों से जुड़े नियम।', keySections: [{ section: 'RERA 2016', title: 'रियल एस्टेट विनियमन', description: 'बिल्डर जवाबदेही और खरीदार के उपाय।' }], examples: [{ title: 'बिल्डर देरी', scenario: 'बिल्डर ने समय पर कब्जा नहीं दिया।', outcome: 'RERA में शिकायत की जा सकती है।' }], useCases: [{ title: 'किराया समझौता', description: 'लिखित समझौते विवाद कम करते हैं।' }], importantLinks: [{ label: 'RERA पोर्टल', url: 'https://maharera.mahaonline.gov.in/' }] },
   },
-  'it-act': {
-    title: 'Information Technology Act, 2000', category: 'Cyber Law',
-    overview: 'India\'s primary law for cybercrime and electronic commerce. Defines cybercrimes and prescribes penalties for hacking, identity theft, cyber terrorism, and publishing obscene material. Complaints at cybercrime.gov.in.',
-    keySections: [
-      { section: 'Section 66', title: 'Computer Related Offences', description: 'Hacking is punishable with up to 3 years imprisonment and/or ₹5 lakh fine.' },
-      { section: 'Section 66C', title: 'Identity Theft', description: 'Using another person\'s electronic signature or password fraudulently: up to 3 years imprisonment.' },
-    ],
-    examples: [
-      { title: 'UPI Fraud', scenario: 'Someone shares OTP and loses ₹50,000.', outcome: 'File on cybercrime.gov.in and call 1930. Under RBI guidelines, if reported within 3 days, liability is limited.' },
-    ],
-    useCases: [
-      { title: 'Reporting Cyber Crime', description: 'Report on cybercrime.gov.in or call 1930.' },
-    ],
-    importantLinks: [
-      { label: 'Cyber Crime Portal', url: 'https://cybercrime.gov.in/' },
-    ]
+  bho: {
+    'constitution-basics': { title: 'भारत के संविधान - मूल बात', category: 'संवैधानिक कानून', overview: 'संविधान भारत के सर्वोच्च कानून ह आ नागरिक के मौलिक अधिकार देला।', keySections: [{ section: 'भाग III', title: 'मौलिक अधिकार', description: 'समानता, स्वतंत्रता, धर्म आ संवैधानिक उपाय से जुड़ल अधिकार।' }], examples: [{ title: 'शिक्षा के अधिकार', scenario: 'बच्चा स्कूल फीस ना दे सके।', outcome: 'मुफ्त आ अनिवार्य शिक्षा के अधिकार लागू होला।' }], useCases: [{ title: 'जनहित याचिका', description: 'अधिकार हनन पर नागरिक कोर्ट जा सकेला।' }], importantLinks: [{ label: 'भारत के संविधान', url: 'https://legislative.gov.in/constitution-of-india/' }] },
+    'consumer-protection-act': { title: 'उपभोक्ता संरक्षण अधिनियम, 2019', category: 'उपभोक्ता कानून', overview: 'गलत व्यापार तरीका आ खराब सामान/सेवा से उपभोक्ता के बचाव करे वाला कानून।', keySections: [{ section: 'धारा 34-37', title: 'विवाद निवारण', description: 'जिला, राज्य आ राष्ट्रीय स्तर पर शिकायत निवारण।' }], examples: [{ title: 'खराब सामान', scenario: 'सामान खरीदला के बाद खराब हो गइल।', outcome: 'रिफंड, रिप्लेसमेंट आ मुआवजा माँगल जा सकेला।' }], useCases: [{ title: 'ऑनलाइन खरीद विवाद', description: 'गलत/ना पहुँचल सामान पर शिकायत।' }], importantLinks: [{ label: 'ई-दाखिल पोर्टल', url: 'https://edaakhil.nic.in/' }] },
+    'it-act': { title: 'सूचना प्रौद्योगिकी अधिनियम, 2000', category: 'साइबर कानून', overview: 'भारत में साइबर अपराध आ डिजिटल लेन-देन खातिर मुख्य कानून।', keySections: [{ section: 'धारा 66', title: 'कंप्यूटर अपराध', description: 'हैकिंग आ दुरुपयोग दंडनीय अपराध बा।' }], examples: [{ title: 'UPI धोखाधड़ी', scenario: 'OTP देवे के बाद ठगी हो गइल।', outcome: 'तुरंते 1930 आ साइबर पोर्टल पर शिकायत करीं।' }], useCases: [{ title: 'साइबर शिकायत', description: 'ऑनलाइन शिकायत करीं आ डिजिटल सबूत बचा के रखीं।' }], importantLinks: [{ label: 'साइबर क्राइम पोर्टल', url: 'https://cybercrime.gov.in/' }] },
+    'labour-laws': { title: 'भारत में श्रम कानून', category: 'रोजगार कानून', overview: 'श्रम कानून मजदूरी, सामाजिक सुरक्षा, सुरक्षा आ औद्योगिक संबंध कवर करेला।', keySections: [{ section: 'कोड ऑन वेज', title: 'न्यूनतम मजदूरी', description: 'न्यूनतम मजदूरी आ समान भुगतान सुनिश्चित करेला।' }], examples: [{ title: 'वेतन देरी', scenario: 'कई महीना से वेतन ना मिलल।', outcome: 'श्रम विभाग में शिकायत हो सकेला।' }], useCases: [{ title: 'PF/ESI अधिकार', description: 'कर्मचारी सामाजिक सुरक्षा लाभ ले सकेलें।' }], importantLinks: [{ label: 'EPFO पोर्टल', url: 'https://unifiedportal-mem.epfindia.gov.in/' }] },
+    'property-rent-laws': { title: 'संपत्ति आ किराया कानून', category: 'संपत्ति कानून', overview: 'रजिस्ट्री, RERA पालन आ किरायेदारी अधिकार से जुड़ल नियम।', keySections: [{ section: 'RERA 2016', title: 'रियल एस्टेट नियमन', description: 'बिल्डर जवाबदेही आ खरीदार के उपाय।' }], examples: [{ title: 'बिल्डर देरी', scenario: 'समय पर कब्जा ना मिलल।', outcome: 'RERA में शिकायत करीं।' }], useCases: [{ title: 'किराया समझौता', description: 'लिखित समझौता विवाद कम करेला।' }], importantLinks: [{ label: 'RERA पोर्टल', url: 'https://maharera.mahaonline.gov.in/' }] },
   },
-  'labour-laws': {
-    title: 'Labour Laws in India', category: 'Employment Law',
-    overview: 'India has consolidated 29 central labour laws into 4 Labour Codes covering wages, industrial relations, social security, and workplace safety.',
-    keySections: [
-      { section: 'Code on Wages, 2019', title: 'Minimum Wages & Payment', description: 'Applies to ALL establishments. Equal remuneration for equal work.' },
-      { section: 'POSH Act, 2013', title: 'Prevention of Sexual Harassment', description: 'All workplaces with 10+ employees must constitute ICC.' },
-    ],
-    examples: [
-      { title: 'Unpaid Wages', scenario: 'A company hasn\'t paid salary for 3 months.', outcome: 'Complain to Labour Commissioner. Employer can be fined up to ₹50,000.' },
-    ],
-    useCases: [
-      { title: 'PF Withdrawal', description: 'Login to EPFO portal. Full withdrawal after 2 months of unemployment.' },
-    ],
-    importantLinks: [
-      { label: 'EPFO Portal', url: 'https://unifiedportal-mem.epfindia.gov.in/' },
-    ]
+  bn: {
+    'constitution-basics': { title: 'ভারতের সংবিধান - মূল ধারণা', category: 'সাংবিধানিক আইন', overview: 'সংবিধান ভারতের সর্বোচ্চ আইন এবং নাগরিকদের মৌলিক অধিকার নিশ্চিত করে।', keySections: [{ section: 'Part III', title: 'মৌলিক অধিকার', description: 'সমতা, স্বাধীনতা, ধর্মীয় অধিকার এবং সাংবিধানিক প্রতিকার।' }], examples: [{ title: 'শিক্ষার অধিকার', scenario: 'শিশু স্কুল ফি দিতে পারছে না।', outcome: 'বিনামূল্যে ও বাধ্যতামূলক শিক্ষার অধিকার প্রযোজ্য।' }], useCases: [{ title: 'জনস্বার্থ মামলা', description: 'অধিকার লঙ্ঘনে নাগরিক আদালতে যেতে পারেন।' }], importantLinks: [{ label: 'ভারতের সংবিধান', url: 'https://legislative.gov.in/constitution-of-india/' }] },
+    'consumer-protection-act': { title: 'ভোক্তা সুরক্ষা আইন, ২০১৯', category: 'ভোক্তা আইন', overview: 'প্রতারণামূলক বাণিজ্য ও ত্রুটিপূর্ণ পণ্য/সেবা থেকে ভোক্তাকে সুরক্ষা দেয়।', keySections: [{ section: 'ধারা 34-37', title: 'বিবাদ নিষ্পত্তি', description: 'জেলা, রাজ্য ও জাতীয় কমিশনের মাধ্যমে নিষ্পত্তি।' }], examples: [{ title: 'ত্রুটিপূর্ণ পণ্য', scenario: 'পণ্য কেনার পর কাজ করা বন্ধ।', outcome: 'রিফান্ড, রিপ্লেসমেন্ট ও ক্ষতিপূরণ দাবি করা যায়।' }], useCases: [{ title: 'অনলাইন কেনাকাটার অভিযোগ', description: 'ভুল/না-পাওয়া পণ্যের বিরুদ্ধে অভিযোগ।' }], importantLinks: [{ label: 'E-Daakhil Portal', url: 'https://edaakhil.nic.in/' }] },
+    'it-act': { title: 'তথ্য প্রযুক্তি আইন, ২০০০', category: 'সাইবার আইন', overview: 'ভারতে সাইবার অপরাধ এবং ডিজিটাল লেনদেনের প্রধান আইন।', keySections: [{ section: 'ধারা 66', title: 'কম্পিউটার অপরাধ', description: 'হ্যাকিং ও অপব্যবহার শাস্তিযোগ্য অপরাধ।' }], examples: [{ title: 'UPI জালিয়াতি', scenario: 'OTP দেওয়ার পরে প্রতারণা।', outcome: 'তৎক্ষণাৎ 1930 এবং সাইবার পোর্টালে অভিযোগ করুন।' }], useCases: [{ title: 'সাইবার অভিযোগ', description: 'অনলাইনে অভিযোগ করুন এবং ডিজিটাল প্রমাণ সংরক্ষণ করুন।' }], importantLinks: [{ label: 'সাইবার ক্রাইম পোর্টাল', url: 'https://cybercrime.gov.in/' }] },
+    'labour-laws': { title: 'ভারতে শ্রম আইন', category: 'কর্মসংস্থান আইন', overview: 'শ্রম আইন মজুরি, সামাজিক সুরক্ষা, নিরাপত্তা এবং শিল্প সম্পর্ক কভার করে।', keySections: [{ section: 'Code on Wages', title: 'ন্যূনতম মজুরি', description: 'ন্যূনতম মজুরি এবং সমান পারিশ্রমিক নিশ্চিত করে।' }], examples: [{ title: 'বেতন বিলম্ব', scenario: 'মাসের পর মাস বেতন বাকি।', outcome: 'শ্রম দপ্তরে অভিযোগ করা যায়।' }], useCases: [{ title: 'PF/ESI অধিকার', description: 'কর্মীরা সামাজিক সুরক্ষার সুবিধা দাবি করতে পারেন।' }], importantLinks: [{ label: 'EPFO Portal', url: 'https://unifiedportal-mem.epfindia.gov.in/' }] },
+    'property-rent-laws': { title: 'সম্পত্তি ও ভাড়া আইন', category: 'সম্পত্তি আইন', overview: 'রেজিস্ট্রেশন, RERA কমপ্লায়েন্স এবং ভাড়াটিয়া অধিকারের নিয়ম।', keySections: [{ section: 'RERA 2016', title: 'রিয়েল এস্টেট নিয়ন্ত্রণ', description: 'বিল্ডার জবাবদিহি ও ক্রেতার প্রতিকার।' }], examples: [{ title: 'বিল্ডার দেরি', scenario: 'সময়ে দখল দেওয়া হয়নি।', outcome: 'RERA-তে অভিযোগ করা যায়।' }], useCases: [{ title: 'ভাড়ার চুক্তি', description: 'লিখিত চুক্তি বিরোধ কমায়।' }], importantLinks: [{ label: 'RERA Portal', url: 'https://maharera.mahaonline.gov.in/' }] },
   },
-  'property-rent-laws': {
-    title: 'Property & Rent Laws', category: 'Property Law',
-    overview: 'Property law in India is governed by Transfer of Property Act, Registration Act, RERA 2016, and state-specific Rent Control Acts.',
-    keySections: [
-      { section: 'RERA 2016', title: 'Real Estate Regulation', description: 'All projects with 500+ sq.m or 8+ apartments must register. Buyers can claim refund with interest for delays.' },
-      { section: 'Model Tenancy Act, 2021', title: 'Tenant-Landlord Framework', description: 'Security deposit limited to 2 months rent. 3-month notice for eviction.' },
-    ],
-    examples: [
-      { title: 'Builder Delay', scenario: 'Builder promised possession in 2023 but hasn\'t delivered.', outcome: 'File RERA complaint. Builder must pay interest or refund with interest.' },
-    ],
-    useCases: [
-      { title: 'Buying Property', description: 'Verify title deed chain, encumbrance certificate, RERA registration, and approved building plan.' },
-    ],
-    importantLinks: [
-      { label: 'MahaRERA', url: 'https://maharera.mahaonline.gov.in/' },
-    ]
+  hinglish: {
+    'constitution-basics': { title: 'Constitution of India - Basics', category: 'Constitutional Law', overview: 'Constitution India ka supreme law hai aur fundamental rights guarantee karta hai.', keySections: [{ section: 'Part III', title: 'Fundamental Rights', description: 'Equality, freedom, religion aur constitutional remedies.' }], examples: [{ title: 'Right to Education', scenario: 'Child school fees afford nahi kar pa raha.', outcome: 'Free aur compulsory education right apply hota hai.' }], useCases: [{ title: 'Public Interest Litigation', description: 'Rights violation par citizens court ja sakte hain.' }], importantLinks: [{ label: 'Constitution of India', url: 'https://legislative.gov.in/constitution-of-india/' }] },
+    'consumer-protection-act': { title: 'Consumer Protection Act, 2019', category: 'Consumer Law', overview: 'Unfair trade aur defective goods/services se consumer ko protection deta hai.', keySections: [{ section: 'Section 34-37', title: 'Dispute Redressal', description: 'District, State aur National level commissions.' }], examples: [{ title: 'Defective Product', scenario: 'Product kharidne ke baad jaldi kharab ho gaya.', outcome: 'Refund, replacement aur compensation claim kar sakte ho.' }], useCases: [{ title: 'Online Shopping Disputes', description: 'Wrong/non-delivery product par complaint file karo.' }], importantLinks: [{ label: 'E-Daakhil Portal', url: 'https://edaakhil.nic.in/' }] },
+    'it-act': { title: 'Information Technology Act, 2000', category: 'Cyber Law', overview: 'Cyber crime aur digital transactions ke liye main Indian law.', keySections: [{ section: 'Section 66', title: 'Computer Offences', description: 'Hacking aur misuse punishable offences hain.' }], examples: [{ title: 'UPI Fraud', scenario: 'OTP share karne ke baad fraud.', outcome: '1930 aur cyber portal par turant report karo.' }], useCases: [{ title: 'Cyber Complaint', description: 'Online complaint karo aur digital evidence save rakho.' }], importantLinks: [{ label: 'Cyber Crime Portal', url: 'https://cybercrime.gov.in/' }] },
+    'labour-laws': { title: 'Labour Laws in India', category: 'Employment Law', overview: 'Labour codes wages, social security, safety aur industrial relations cover karte hain.', keySections: [{ section: 'Code on Wages', title: 'Minimum Wages', description: 'Minimum wage aur equal remuneration ensure karta hai.' }], examples: [{ title: 'Salary Delay', scenario: 'Months se salary unpaid hai.', outcome: 'Worker labour authorities me complaint kar sakta hai.' }], useCases: [{ title: 'PF/ESI Rights', description: 'Employees social security benefits claim kar sakte hain.' }], importantLinks: [{ label: 'EPFO Portal', url: 'https://unifiedportal-mem.epfindia.gov.in/' }] },
+    'property-rent-laws': { title: 'Property & Rent Laws', category: 'Property Law', overview: 'Registration, RERA compliance aur tenancy rights ke rules cover karta hai.', keySections: [{ section: 'RERA 2016', title: 'Real Estate Regulation', description: 'Builder accountability aur buyer remedies define karta hai.' }], examples: [{ title: 'Builder Delay', scenario: 'Builder ne time pe possession nahi diya.', outcome: 'RERA complaint file kar sakte ho.' }], useCases: [{ title: 'Rent Agreement', description: 'Written agreement se disputes kam hote hain.' }], importantLinks: [{ label: 'RERA Portal', url: 'https://maharera.mahaonline.gov.in/' }] },
   },
 };
 
 export default function LawDetailPage() {
   const { slug } = useParams();
+  const { language } = useLanguage();
   const [law, setLaw] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openSection, setOpenSection] = useState(null);
+  const L = labels[language] || labels.en;
 
   useEffect(() => {
+    if (language !== 'en') {
+      setLaw((lawsByLang[language] || lawsByLang.en)[slug] || null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     fetch(`${API}/laws/${slug}`)
-      .then(r => r.json())
-      .then(data => {
+      .then((r) => r.json())
+      .then((data) => {
         if (data && data.title) setLaw(data);
-        else setLaw(fallbackLaws[slug] || null);
+        else setLaw((lawsByLang.en)[slug] || null);
       })
-      .catch(() => setLaw(fallbackLaws[slug] || null))
+      .catch(() => setLaw((lawsByLang.en)[slug] || null))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, language]);
 
-  if (loading) {
-    return (
-      <div className="page-container">
-        <div className="skeleton skeleton-title" />
-        <div className="skeleton skeleton-text" style={{ width: '80%' }} />
-        <div className="skeleton skeleton-text" style={{ width: '60%' }} />
-        <div className="skeleton skeleton-card" style={{ marginTop: 24 }} />
-      </div>
-    );
-  }
-
-  if (!law) {
-    return (
-      <div className="page-container" style={{ textAlign: 'center', padding: '80px 24px' }}>
-        <h2>Law not found</h2>
-        <p style={{ color: 'var(--text-secondary)', marginTop: 8 }}>The requested law page does not exist.</p>
-        <Link to="/legal-knowledge" className="btn btn-primary" style={{ marginTop: 20 }}>← Back to Legal Knowledge</Link>
-      </div>
-    );
-  }
+  if (loading) return <div className="page-container"><div className="skeleton skeleton-title" /></div>;
+  if (!law) return <div className="page-container" style={{ textAlign: 'center', padding: '80px 24px' }}><h2>{L.notFound}</h2></div>;
 
   return (
     <div className="page-container fade-in">
-      <Link to="/legal-knowledge" className="back-btn">
-        ← Back to Legal Knowledge
-      </Link>
+      <Link to="/legal-knowledge" className="back-btn">{L.back}</Link>
 
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, var(--primary-bg), rgba(37,99,235,0.08))',
-        borderRadius: 20, padding: '32px 28px', marginBottom: 32,
-        border: '1px solid rgba(37,99,235,0.12)',
-      }}>
+      <div style={{ background: 'linear-gradient(135deg, var(--primary-bg), rgba(37,99,235,0.08))', borderRadius: 20, padding: '32px 28px', marginBottom: 32, border: '1px solid rgba(37,99,235,0.12)' }}>
         <div style={{ marginBottom: 12 }}>
           <span className="badge badge-primary" style={{ marginBottom: 6, display: 'inline-block' }}>{law.category}</span>
           <h1 style={{ fontSize: 'clamp(22px, 4vw, 30px)', fontWeight: 800, letterSpacing: '-0.02em' }}>{law.title}</h1>
         </div>
       </div>
 
-      {/* Overview */}
-      <section style={{ marginBottom: 36 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-          Overview
-        </h2>
-        <div className="card" style={{ lineHeight: 1.8 }}>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{law.overview}</p>
-        </div>
-      </section>
+      <section style={{ marginBottom: 36 }}><h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{L.overview}</h2><div className="card"><p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>{law.overview}</p></div></section>
 
-      {/* Key Sections */}
-      {law.keySections?.length > 0 && (
-        <section style={{ marginBottom: 36 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            Key Sections
-          </h2>
-          {law.keySections.map((sec, i) => (
-            <div key={i} style={{
-              background: '#fff', borderRadius: 14, marginBottom: 8,
-              border: `1px solid ${openSection === i ? 'var(--primary-light)' : 'var(--border)'}`,
-              overflow: 'hidden', transition: 'border-color 0.2s',
-            }}>
-              <button onClick={() => setOpenSection(openSection === i ? null : i)} style={{
-                width: '100%', padding: '16px 20px', border: 'none',
-                background: 'transparent', cursor: 'pointer', textAlign: 'left',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <div>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, color: 'var(--primary)',
-                    background: 'var(--primary-bg)', padding: '2px 8px',
-                    borderRadius: 4, marginBottom: 4, display: 'inline-block',
-                  }}>{sec.section}</span>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginTop: 4 }}>{sec.title}</div>
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2"
-                  style={{ transform: openSection === i ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.2s', flexShrink: 0 }}>
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
-              </button>
-              {openSection === i && (
-                <div className="fade-in" style={{ padding: '0 20px 18px' }}>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.8 }}>{sec.description}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </section>
-      )}
+      {law.keySections?.length > 0 && <section style={{ marginBottom: 36 }}><h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{L.key}</h2>{law.keySections.map((sec, i) => (<div key={i} style={{ background: '#fff', borderRadius: 14, marginBottom: 8, border: `1px solid ${openSection === i ? 'var(--primary-light)' : 'var(--border)'}`, overflow: 'hidden' }}><button onClick={() => setOpenSection(openSection === i ? null : i)} style={{ width: '100%', padding: '16px 20px', border: 'none', background: 'transparent', textAlign: 'left', display: 'flex', justifyContent: 'space-between' }}><div><span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'var(--primary-bg)', padding: '2px 8px', borderRadius: 4 }}>{sec.section}</span><div style={{ fontSize: 15, fontWeight: 700, marginTop: 4 }}>{sec.title}</div></div></button>{openSection === i && <div style={{ padding: '0 20px 18px' }}><p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{sec.description}</p></div>}</div>))}</section>}
 
-      {/* Examples */}
-      {law.examples?.length > 0 && (
-        <section style={{ marginBottom: 36 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            Real-World Examples
-          </h2>
-          <div className="grid-2">
-            {law.examples.map((ex, i) => (
-              <div key={i} className="card fade-up" style={{ animationDelay: `${i * 0.06}s` }}>
-                <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10, color: 'var(--primary)' }}>{ex.title}</h4>
-                <div style={{ marginBottom: 10 }}>
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, color: 'var(--accent)',
-                    background: 'var(--accent-bg)', padding: '2px 8px', borderRadius: 4,
-                  }}>Scenario</span>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.6 }}>{ex.scenario}</p>
-                </div>
-                <div>
-                  <span style={{
-                    fontSize: 11, fontWeight: 600, color: 'var(--secondary)',
-                    background: 'var(--secondary-bg)', padding: '2px 8px', borderRadius: 4,
-                  }}>Outcome</span>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.6 }}>{ex.outcome}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {law.examples?.length > 0 && <section style={{ marginBottom: 36 }}><h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{L.ex}</h2><div className="grid-2">{law.examples.map((ex, i) => <div key={i} className="card"><h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 10, color: 'var(--primary)' }}>{ex.title}</h4><p style={{ fontSize: 13 }}><strong>{L.scenario}: </strong>{ex.scenario}</p><p style={{ fontSize: 13, marginTop: 8 }}><strong>{L.outcome}: </strong>{ex.outcome}</p></div>)}</div></section>}
 
-      {/* Use Cases */}
-      {law.useCases?.length > 0 && (
-        <section style={{ marginBottom: 36 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            Practical Use Cases
-          </h2>
-          <div className="grid-2">
-            {law.useCases.map((uc, i) => (
-              <div key={i} className="card fade-up" style={{
-                borderLeft: '4px solid var(--primary-light)',
-                animationDelay: `${i * 0.05}s`,
-              }}>
-                <h4 style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{uc.title}</h4>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{uc.description}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {law.useCases?.length > 0 && <section style={{ marginBottom: 36 }}><h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{L.use}</h2><div className="grid-2">{law.useCases.map((u, i) => <div key={i} className="card"><h4 style={{ fontSize: 14, fontWeight: 700 }}>{u.title}</h4><p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{u.description}</p></div>)}</div></section>}
 
-      {/* Important Links */}
-      {law.importantLinks?.length > 0 && (
-        <section style={{ marginBottom: 36 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            Official Links
-          </h2>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {law.importantLinks.map((link, i) => (
-              <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ fontSize: 13 }}>
-                {link.label}
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                  <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                </svg>
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
+      {law.importantLinks?.length > 0 && <section style={{ marginBottom: 36 }}><h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{L.links}</h2><div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>{law.importantLinks.map((link, i) => <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="btn btn-outline" style={{ fontSize: 13 }}>{link.label}</a>)}</div></section>}
     </div>
   );
 }

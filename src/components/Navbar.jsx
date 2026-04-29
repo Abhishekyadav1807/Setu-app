@@ -1,24 +1,25 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-
-const navLinks = [
-  { path: '/', label: 'Home' },
-  { path: '/legal-knowledge', label: 'Legal Knowledge' },
-  { path: '/legal-procedures', label: 'Legal Procedures' },
-  { path: '/government-schemes', label: 'Gov Schemes' },
-  { path: '/document-generator', label: 'Document Generator' },
-  { path: '/about', label: 'About' },
-];
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
+  const { language, setLanguage, t, languages } = useLanguage();
+  const navLinks = [
+    { path: '/', label: t('nav.home') },
+    { path: '/legal-knowledge', label: t('nav.legalKnowledge') },
+    { path: '/legal-procedures', label: t('nav.legalProcedures') },
+    { path: '/government-schemes', label: t('nav.govSchemes') },
+    { path: '/document-generator', label: t('nav.docGen') },
+    { path: '/about', label: t('nav.about') },
+  ];
 
   return (
     <>
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(255,255,255,0.92)',
+        background: 'rgba(255,255,255,0.95)',
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border)',
         height: 'var(--nav-height)',
@@ -49,24 +50,45 @@ export default function Navbar() {
               <div style={{
                 fontSize: 9, color: 'var(--text-muted)', fontWeight: 500,
                 letterSpacing: '0.05em', marginTop: -2,
-              }}>LEGAL AWARENESS</div>
+              }}>{t('nav.legalAwareness')}</div>
             </div>
           </Link>
 
           {/* Desktop Nav */}
           <div className="hide-mobile" style={{
-            display: 'flex', gap: 2,
+            display: 'flex', gap: 2, alignItems: 'center',
           }}>
             {navLinks.map(link => (
               <Link key={link.path} to={link.path} style={{
-                padding: '8px 14px', borderRadius: 8, fontSize: 13,
+                padding: '8px 11px', borderRadius: 10, fontSize: 12.5,
                 fontWeight: location.pathname === link.path ? 600 : 500,
                 color: location.pathname === link.path ? 'var(--primary)' : 'var(--text-secondary)',
                 background: location.pathname === link.path ? 'var(--primary-bg)' : 'transparent',
                 textDecoration: 'none',
                 transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
               }}>{link.label}</Link>
             ))}
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              aria-label="language-selector"
+              style={{
+                marginLeft: 10,
+                border: '1px solid #1f2937',
+                borderRadius: 12,
+                padding: '8px 10px',
+                fontSize: 12,
+                background: '#fff',
+                color: 'var(--text)',
+                minWidth: 104,
+                fontWeight: 600,
+              }}
+            >
+              {languages.map((lang) => (
+                <option key={lang.code} value={lang.code}>{lang.label}</option>
+              ))}
+            </select>
           </div>
 
           {/* Hamburger */}
@@ -109,7 +131,27 @@ export default function Navbar() {
               color: location.pathname === '/disclaimer' ? 'var(--primary)' : 'var(--text-muted)',
               background: location.pathname === '/disclaimer' ? 'var(--primary-bg)' : 'transparent',
               textDecoration: 'none',
-            }}>Legal Disclaimer</Link>
+            }}>{t('nav.disclaimer')}</Link>
+            <div style={{ padding: '8px 14px' }}>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                aria-label="language-selector-mobile"
+                style={{
+                  width: '100%',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  padding: '9px 10px',
+                  fontSize: 14,
+                  background: '#fff',
+                  color: 'var(--text)',
+                }}
+              >
+                {languages.map((lang) => (
+                  <option key={lang.code} value={lang.code}>{lang.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
       </nav>

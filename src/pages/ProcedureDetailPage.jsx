@@ -1,256 +1,101 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const fallbackProcedures = {
-  'fir-filing': {
-    title: 'FIR Filing',
-    purpose: 'An FIR (First Information Report) is a written document prepared by police when they receive information about a cognizable offence. Under Section 173 BNSS, police are legally bound to register an FIR.',
-    requiredDocuments: ['Government-issued ID proof', 'Written complaint', 'Evidence (photos, videos, screenshots)', 'Details of accused (if known)', 'Details of witnesses (if any)', 'Medical certificate (if injury)'],
-    steps: [
-      { stepNumber: 1, title: 'Visit Nearest Police Station', description: 'Go to the police station with jurisdiction. Under Zero FIR, you can file at ANY station.' },
-      { stepNumber: 2, title: 'Meet the SHO', description: 'Ask to meet the Station House Officer. Clearly state you want to file an FIR.' },
-      { stepNumber: 3, title: 'Narrate the Incident', description: 'Describe the incident with date, time, place, and details of offence.' },
-      { stepNumber: 4, title: 'Read and Sign', description: 'Read the FIR carefully before signing. Ensure all facts are correct.' },
-      { stepNumber: 5, title: 'Get FIR Copy', description: 'Police must give you a free copy. Note down the FIR number.' },
-      { stepNumber: 6, title: 'Follow Up', description: 'Follow up within 72 hours for investigation status.' },
-    ],
-    fees: 'Free – No charges for filing an FIR',
-    timeline: 'FIR must be registered immediately. Investigation within 24 hours.',
-    officialLink: 'https://digitalpolice.gov.in/',
-    tips: ['If police refuse, send complaint to SP/SSP', 'Zero FIR can be filed at any station', 'For cyber crimes, use cybercrime.gov.in'],
+const labels = {
+  en: { back: '<- Back to Legal Procedures', purpose: 'Purpose', fees: 'Fees', timeline: 'Timeline', site: 'Official Website', req: 'Required Documents', steps: 'Step-by-Step Process', tips: 'Important Tips', notFound: 'Procedure not found' },
+  hi: { back: '<- कानूनी प्रक्रियाओं पर वापस', purpose: 'उद्देश्य', fees: 'शुल्क', timeline: 'समयसीमा', site: 'आधिकारिक वेबसाइट', req: 'आवश्यक दस्तावेज़', steps: 'चरण-दर-चरण प्रक्रिया', tips: 'महत्वपूर्ण सुझाव', notFound: 'प्रक्रिया नहीं मिली' },
+  bho: { back: '<- कानूनी प्रक्रिया पर वापस', purpose: 'उद्देश्य', fees: 'शुल्क', timeline: 'समय', site: 'आधिकारिक वेबसाइट', req: 'जरूरी दस्तावेज', steps: 'स्टेप-बाय-स्टेप प्रक्रिया', tips: 'महत्वपूर्ण सुझाव', notFound: 'प्रक्रिया ना मिलल' },
+  bn: { back: '<- আইনি প্রক্রিয়ায় ফিরে যান', purpose: 'উদ্দেশ্য', fees: 'ফি', timeline: 'সময়সীমা', site: 'অফিসিয়াল ওয়েবসাইট', req: 'প্রয়োজনীয় ডকুমেন্ট', steps: 'ধাপে ধাপে প্রক্রিয়া', tips: 'গুরুত্বপূর্ণ টিপস', notFound: 'প্রক্রিয়া পাওয়া যায়নি' },
+  hinglish: { back: '<- Back to Legal Procedures', purpose: 'Purpose', fees: 'Fees', timeline: 'Timeline', site: 'Official Website', req: 'Required Documents', steps: 'Step-by-Step Process', tips: 'Important Tips', notFound: 'Procedure nahi mila' },
+};
+
+const proceduresByLang = {
+  en: {
+    'fir-filing': { title: 'FIR Filing', purpose: 'Register a First Information Report for cognizable offences.', requiredDocuments: ['ID proof', 'Written complaint'], steps: [{ stepNumber: 1, title: 'Visit Police Station', description: 'Go to nearest police station and report incident.' }], fees: 'Free', timeline: 'Immediate', officialLink: 'https://digitalpolice.gov.in/', tips: ['Ask for FIR copy.'] },
+    'rti-application': { title: 'RTI Application', purpose: 'Seek information from public authority under RTI Act.', requiredDocuments: ['Application', 'Fee'], steps: [{ stepNumber: 1, title: 'Draft RTI', description: 'Write clear questions addressed to PIO.' }], fees: '₹10', timeline: '30 days', officialLink: 'https://rtionline.gov.in/', tips: ['Keep acknowledgement.'] },
+    'consumer-complaint': { title: 'Consumer Complaint', purpose: 'File complaint for defective goods or services.', requiredDocuments: ['Bill', 'ID proof'], steps: [{ stepNumber: 1, title: 'Gather Proof', description: 'Collect invoice and communication record.' }], fees: 'As per claim', timeline: '3-5 months', officialLink: 'https://edaakhil.nic.in/', tips: ['File within limitation period.'] },
+    'marriage-registration': { title: 'Marriage Registration', purpose: 'Get legal recognition for marriage.', requiredDocuments: ['Age proof', 'Address proof'], steps: [{ stepNumber: 1, title: 'Apply', description: 'Submit form with required documents.' }], fees: 'State wise', timeline: '1-30 days', officialLink: 'https://www.india.gov.in/topics/law-justice/marriage', tips: ['Carry originals.'] },
+    'passport-application': { title: 'Passport Application', purpose: 'Apply for passport through Passport Seva.', requiredDocuments: ['Aadhaar', 'Address proof'], steps: [{ stepNumber: 1, title: 'Register Online', description: 'Create account and fill passport form.' }], fees: '₹1500+', timeline: '30-45 days', officialLink: 'https://www.passportindia.gov.in/', tips: ['Book appointment early.'] },
   },
-  'rti-application': {
-    title: 'RTI Application',
-    purpose: 'The Right to Information Act 2005 empowers citizens to request information from any public authority. Response within 30 days.',
-    requiredDocuments: ['Written application to PIO', '₹10 fee', 'Specific clear questions', 'Name and address', 'BPL card (for fee exemption)'],
-    steps: [
-      { stepNumber: 1, title: 'Identify Public Authority', description: 'Determine which department holds the information.' },
-      { stepNumber: 2, title: 'Draft Application', description: 'Write specific questions. Address to PIO.' },
-      { stepNumber: 3, title: 'Pay Fee', description: '₹10 for central government. BPL exempt.' },
-      { stepNumber: 4, title: 'Submit', description: 'Online at rtionline.gov.in or by registered post.' },
-      { stepNumber: 5, title: 'Track Response', description: 'PIO must reply within 30 days.' },
-      { stepNumber: 6, title: 'File Appeal if Needed', description: 'First Appeal within 30 days, Second Appeal to Information Commission within 90 days.' },
-    ],
-    fees: '₹10 per application. BPL families exempt.',
-    timeline: '30 days response. 48 hours for life/liberty matters.',
-    officialLink: 'https://rtionline.gov.in/',
-    tips: ['Ask specific questions', 'No need to give reason', 'Keep copies of everything'],
+  hi: {
+    'fir-filing': { title: 'एफआईआर दर्ज करना', purpose: 'संज्ञेय अपराध के लिए प्रथम सूचना रिपोर्ट दर्ज करें।', requiredDocuments: ['पहचान पत्र', 'लिखित शिकायत'], steps: [{ stepNumber: 1, title: 'थाने जाएँ', description: 'नजदीकी थाने में घटना की जानकारी दें।' }], fees: 'निःशुल्क', timeline: 'तुरंत', officialLink: 'https://digitalpolice.gov.in/', tips: ['FIR की प्रति जरूर लें।'] },
+    'rti-application': { title: 'आरटीआई आवेदन', purpose: 'RTI अधिनियम के तहत सरकारी विभाग से जानकारी मांगें।', requiredDocuments: ['आवेदन पत्र', 'शुल्क'], steps: [{ stepNumber: 1, title: 'RTI ड्राफ्ट करें', description: 'PIO को स्पष्ट प्रश्न लिखकर आवेदन करें।' }], fees: '₹10', timeline: '30 दिन', officialLink: 'https://rtionline.gov.in/', tips: ['रसीद संभालकर रखें।'] },
+    'consumer-complaint': { title: 'उपभोक्ता शिकायत', purpose: 'खराब वस्तु या सेवा के खिलाफ शिकायत दर्ज करें।', requiredDocuments: ['बिल', 'पहचान पत्र'], steps: [{ stepNumber: 1, title: 'सबूत जुटाएँ', description: 'इनवॉइस और बातचीत के रिकॉर्ड रखें।' }], fees: 'दावे के अनुसार', timeline: '3-5 महीने', officialLink: 'https://edaakhil.nic.in/', tips: ['समयसीमा के भीतर शिकायत करें।'] },
+    'marriage-registration': { title: 'विवाह पंजीकरण', purpose: 'विवाह को कानूनी मान्यता दिलाने हेतु पंजीकरण करें।', requiredDocuments: ['आयु प्रमाण', 'पता प्रमाण'], steps: [{ stepNumber: 1, title: 'आवेदन करें', description: 'आवश्यक दस्तावेज़ों के साथ आवेदन जमा करें।' }], fees: 'राज्य अनुसार', timeline: '1-30 दिन', officialLink: 'https://www.india.gov.in/topics/law-justice/marriage', tips: ['मूल दस्तावेज साथ रखें।'] },
+    'passport-application': { title: 'पासपोर्ट आवेदन', purpose: 'पासपोर्ट सेवा के माध्यम से पासपोर्ट के लिए आवेदन करें।', requiredDocuments: ['आधार', 'पता प्रमाण'], steps: [{ stepNumber: 1, title: 'ऑनलाइन रजिस्टर करें', description: 'अकाउंट बनाकर पासपोर्ट फॉर्म भरें।' }], fees: '₹1500+', timeline: '30-45 दिन', officialLink: 'https://www.passportindia.gov.in/', tips: ['अपॉइंटमेंट जल्दी बुक करें।'] },
   },
-  'consumer-complaint': {
-    title: 'Consumer Complaint',
-    purpose: 'Filing a consumer complaint to seek redressal against unfair trade practices, defective goods, or deficient services under Consumer Protection Act 2019.',
-    requiredDocuments: ['ID proof', 'Purchase receipt/bill', 'Product warranty card', 'Written complaint', 'Communication with seller', 'Photos/videos of defect'],
-    steps: [
-      { stepNumber: 1, title: 'Contact Seller First', description: 'Send written complaint. Give 15-30 days to resolve.' },
-      { stepNumber: 2, title: 'Send Legal Notice', description: 'Send legal notice via registered AD post.' },
-      { stepNumber: 3, title: 'Register on e-Daakhil', description: 'Create account at edaakhil.nic.in.' },
-      { stepNumber: 4, title: 'File Complaint Online', description: 'Fill form, upload evidence, select forum.' },
-      { stepNumber: 5, title: 'Pay Court Fee', description: 'NIL for claims up to ₹5 lakh.' },
-      { stepNumber: 6, title: 'Attend Hearings', description: 'Video conference available. No lawyer needed.' },
-    ],
-    fees: 'Free for claims up to ₹5 lakh. ₹200 to ₹5,000 based on amount.',
-    timeline: '3-5 months typically. Appeal within 30 days.',
-    officialLink: 'https://edaakhil.nic.in/',
-    tips: ['No lawyer needed', 'File within 2 years', 'Can claim mental agony compensation'],
+  bho: {
+    'fir-filing': { title: 'एफआईआर दर्ज करावल', purpose: 'संज्ञेय अपराध खातिर FIR दर्ज करीं।', requiredDocuments: ['पहचान पत्र', 'लिखित शिकायत'], steps: [{ stepNumber: 1, title: 'थाना जाएं', description: 'नजदीकी थाना पर घटना बताईं।' }], fees: 'मुफ्त', timeline: 'तुरंते', officialLink: 'https://digitalpolice.gov.in/', tips: ['FIR कॉपी ले लीं।'] },
+    'rti-application': { title: 'आरटीआई आवेदन', purpose: 'सरकारी विभाग से जानकारी खातिर RTI लगाईं।', requiredDocuments: ['आवेदन', 'शुल्क'], steps: [{ stepNumber: 1, title: 'RTI लिखीं', description: 'PIO खातिर साफ सवाल लिखीं।' }], fees: '₹10', timeline: '30 दिन', officialLink: 'https://rtionline.gov.in/', tips: ['रसीद संभाल के राखीं।'] },
+    'consumer-complaint': { title: 'उपभोक्ता शिकायत', purpose: 'खराब सामान/सेवा पर शिकायत दर्ज करीं।', requiredDocuments: ['बिल', 'पहचान पत्र'], steps: [{ stepNumber: 1, title: 'सबूत जुटाईं', description: 'इनवॉइस आ बातचीत रिकॉर्ड रखीं।' }], fees: 'दावा अनुसार', timeline: '3-5 महीना', officialLink: 'https://edaakhil.nic.in/', tips: ['समय से शिकायत करीं।'] },
+    'marriage-registration': { title: 'विवाह रजिस्ट्रेशन', purpose: 'शादी के कानूनी मान्यता खातिर रजिस्ट्रेशन करीं।', requiredDocuments: ['उम्र प्रमाण', 'पता प्रमाण'], steps: [{ stepNumber: 1, title: 'आवेदन करीं', description: 'दस्तावेज संग फॉर्म जमा करीं।' }], fees: 'राज्य अनुसार', timeline: '1-30 दिन', officialLink: 'https://www.india.gov.in/topics/law-justice/marriage', tips: ['ओरिजिनल कागज साथ राखीं।'] },
+    'passport-application': { title: 'पासपोर्ट आवेदन', purpose: 'पासपोर्ट सेवा से पासपोर्ट खातिर आवेदन करीं।', requiredDocuments: ['आधार', 'पता प्रमाण'], steps: [{ stepNumber: 1, title: 'ऑनलाइन रजिस्टर करीं', description: 'अकाउंट बनाके फॉर्म भरल जाला।' }], fees: '₹1500+', timeline: '30-45 दिन', officialLink: 'https://www.passportindia.gov.in/', tips: ['अपॉइंटमेंट जल्दी बुक करीं।'] },
   },
-  'marriage-registration': {
-    title: 'Marriage Registration',
-    purpose: 'Marriage registration provides legal recognition and serves as conclusive proof. Essential for passport, visa, property rights.',
-    requiredDocuments: ['Age proof of both parties', 'Address proof', 'Photographs', 'Marriage invitation card', 'Affidavit', 'Two witnesses with ID'],
-    steps: [
-      { stepNumber: 1, title: 'Collect Documents', description: 'Gather all documents. Get affidavit on stamp paper.' },
-      { stepNumber: 2, title: 'Apply at Sub-Registrar', description: 'Visit Sub-Registrar office or apply online.' },
-      { stepNumber: 3, title: '30-Day Notice (Special Marriage Act)', description: 'Notice published for objections. Only for Special Marriage Act.' },
-      { stepNumber: 4, title: 'Both Parties Appear', description: 'Bride, groom, and witnesses appear with originals.' },
-      { stepNumber: 5, title: 'Sign Register', description: 'Sign the marriage register.' },
-      { stepNumber: 6, title: 'Collect Certificate', description: 'Certificate issued same day or within 15 days.' },
-    ],
-    fees: '₹100-500 varies by state.',
-    timeline: 'Personal law: 1-7 days. Special Marriage Act: 30+ days.',
-    officialLink: 'https://www.india.gov.in/topics/law-justice/marriage',
-    tips: ['Register as soon as possible', 'Both parties must be present', 'Keep multiple copies'],
+  bn: {
+    'fir-filing': { title: 'এফআইআর দায়ের', purpose: 'সজ্ঞেয় অপরাধের জন্য FIR দায়ের করুন।', requiredDocuments: ['আইডি প্রুফ', 'লিখিত অভিযোগ'], steps: [{ stepNumber: 1, title: 'থানায় যান', description: 'নিকটবর্তী থানায় গিয়ে অভিযোগ জানান।' }], fees: 'ফ্রি', timeline: 'তাৎক্ষণিক', officialLink: 'https://digitalpolice.gov.in/', tips: ['FIR কপি সংগ্রহ করুন।'] },
+    'rti-application': { title: 'আরটিআই আবেদন', purpose: 'সরকারি দপ্তর থেকে তথ্যের জন্য RTI করুন।', requiredDocuments: ['আবেদনপত্র', 'ফি'], steps: [{ stepNumber: 1, title: 'RTI খসড়া করুন', description: 'PIO-কে পরিষ্কার প্রশ্ন লিখুন।' }], fees: '₹10', timeline: '30 দিন', officialLink: 'https://rtionline.gov.in/', tips: ['রসিদ সংরক্ষণ করুন।'] },
+    'consumer-complaint': { title: 'ভোক্তা অভিযোগ', purpose: 'ত্রুটিপূর্ণ পণ্য/সেবার বিরুদ্ধে অভিযোগ করুন।', requiredDocuments: ['বিল', 'আইডি প্রুফ'], steps: [{ stepNumber: 1, title: 'প্রমাণ সংগ্রহ', description: 'ইনভয়েস ও যোগাযোগের রেকর্ড রাখুন।' }], fees: 'দাবি অনুযায়ী', timeline: '3-5 মাস', officialLink: 'https://edaakhil.nic.in/', tips: ['সময়ের মধ্যে অভিযোগ করুন।'] },
+    'marriage-registration': { title: 'বিবাহ নিবন্ধন', purpose: 'বিয়ে আইনি স্বীকৃতির জন্য নিবন্ধন করুন।', requiredDocuments: ['বয়সের প্রমাণ', 'ঠিকানার প্রমাণ'], steps: [{ stepNumber: 1, title: 'আবেদন করুন', description: 'প্রয়োজনীয় নথি সহ ফর্ম জমা দিন।' }], fees: 'রাজ্যভেদে', timeline: '1-30 দিন', officialLink: 'https://www.india.gov.in/topics/law-justice/marriage', tips: ['অরিজিনাল নথি সঙ্গে নিন।'] },
+    'passport-application': { title: 'পাসপোর্ট আবেদন', purpose: 'পাসপোর্ট সেবার মাধ্যমে পাসপোর্টের জন্য আবেদন করুন।', requiredDocuments: ['আধার', 'ঠিকানার প্রমাণ'], steps: [{ stepNumber: 1, title: 'অনলাইনে রেজিস্টার করুন', description: 'অ্যাকাউন্ট তৈরি করে ফর্ম পূরণ করুন।' }], fees: '₹1500+', timeline: '30-45 দিন', officialLink: 'https://www.passportindia.gov.in/', tips: ['অ্যাপয়েন্টমেন্ট আগে বুক করুন।'] },
   },
-  'passport-application': {
-    title: 'Passport Application',
-    purpose: 'Apply for an Indian passport through the Passport Seva portal. The passport serves as proof of citizenship and is essential for international travel.',
-    requiredDocuments: ['Aadhaar card', 'Voter ID or PAN', 'Birth certificate', 'Passport photos', 'Old passport (for renewal)'],
-    steps: [
-      { stepNumber: 1, title: 'Register on Portal', description: 'Create account at passportindia.gov.in.' },
-      { stepNumber: 2, title: 'Fill Application', description: 'Fill passport application form online.' },
-      { stepNumber: 3, title: 'Pay Fee', description: 'Normal: ₹1,500. Tatkal: ₹3,500.' },
-      { stepNumber: 4, title: 'Book Appointment', description: 'Schedule visit at nearest PSK.' },
-      { stepNumber: 5, title: 'Visit PSK', description: 'Bring originals for verification and biometrics.' },
-      { stepNumber: 6, title: 'Police Verification', description: 'Passport dispatched via Speed Post.' },
-    ],
-    fees: 'Normal: ₹1,500. Tatkal: ₹3,500.',
-    timeline: 'Normal: 30-45 days. Tatkal: 1-3 days.',
-    officialLink: 'https://www.passportindia.gov.in/',
-    tips: ['Apply online only', 'Ensure Aadhaar address matches', 'Reach PSK 15 min early'],
+  hinglish: {
+    'fir-filing': { title: 'FIR Filing', purpose: 'Cognizable offence ke liye FIR register karo.', requiredDocuments: ['ID proof', 'Written complaint'], steps: [{ stepNumber: 1, title: 'Police Station Jao', description: 'Nearest police station me incident report karo.' }], fees: 'Free', timeline: 'Immediate', officialLink: 'https://digitalpolice.gov.in/', tips: ['FIR copy zaroor lo.'] },
+    'rti-application': { title: 'RTI Application', purpose: 'Public authority se information lene ke liye RTI file karo.', requiredDocuments: ['Application', 'Fee'], steps: [{ stepNumber: 1, title: 'RTI Draft karo', description: 'PIO ko clear questions bhejo.' }], fees: '₹10', timeline: '30 days', officialLink: 'https://rtionline.gov.in/', tips: ['Acknowledgement sambhal ke rakho.'] },
+    'consumer-complaint': { title: 'Consumer Complaint', purpose: 'Defective goods/services ke against complaint file karo.', requiredDocuments: ['Bill', 'ID proof'], steps: [{ stepNumber: 1, title: 'Proof collect karo', description: 'Invoice aur communication record rakho.' }], fees: 'As per claim', timeline: '3-5 months', officialLink: 'https://edaakhil.nic.in/', tips: ['Limitation period ke andar file karo.'] },
+    'marriage-registration': { title: 'Marriage Registration', purpose: 'Marriage ko legal recognition dene ke liye registration karo.', requiredDocuments: ['Age proof', 'Address proof'], steps: [{ stepNumber: 1, title: 'Apply karo', description: 'Required documents ke saath form submit karo.' }], fees: 'State wise', timeline: '1-30 days', officialLink: 'https://www.india.gov.in/topics/law-justice/marriage', tips: ['Original documents saath rakho.'] },
+    'passport-application': { title: 'Passport Application', purpose: 'Passport Seva ke through passport apply karo.', requiredDocuments: ['Aadhaar', 'Address proof'], steps: [{ stepNumber: 1, title: 'Online Register karo', description: 'Account bana ke form fill karo.' }], fees: '₹1500+', timeline: '30-45 days', officialLink: 'https://www.passportindia.gov.in/', tips: ['Appointment early book karo.'] },
   },
 };
 
 export default function ProcedureDetailPage() {
   const { slug } = useParams();
+  const { language } = useLanguage();
   const [procedure, setProcedure] = useState(null);
   const [loading, setLoading] = useState(true);
+  const L = labels[language] || labels.en;
 
   useEffect(() => {
+    if (language !== 'en') {
+      setProcedure((proceduresByLang[language] || proceduresByLang.en)[slug] || null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     fetch(`${API}/procedures/${slug}`)
-      .then(r => r.json())
-      .then(data => {
+      .then((r) => r.json())
+      .then((data) => {
         if (data && data.title) setProcedure(data);
-        else setProcedure(fallbackProcedures[slug] || null);
+        else setProcedure((proceduresByLang.en)[slug] || null);
       })
-      .catch(() => setProcedure(fallbackProcedures[slug] || null))
+      .catch(() => setProcedure((proceduresByLang.en)[slug] || null))
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [slug, language]);
 
-  if (loading) {
-    return (
-      <div className="page-container">
-        <div className="skeleton skeleton-title" />
-        <div className="skeleton skeleton-text" style={{ width: '80%' }} />
-        <div className="skeleton skeleton-card" style={{ marginTop: 24 }} />
-      </div>
-    );
-  }
-
-  if (!procedure) {
-    return (
-      <div className="page-container" style={{ textAlign: 'center', padding: '80px 24px' }}>
-        <h2>Procedure not found</h2>
-        <Link to="/legal-procedures" className="btn btn-primary" style={{ marginTop: 20 }}>← Back to Procedures</Link>
-      </div>
-    );
-  }
+  if (loading) return <div className="page-container"><div className="skeleton skeleton-title" /></div>;
+  if (!procedure) return <div className="page-container" style={{ textAlign: 'center', padding: '80px 24px' }}><h2>{L.notFound}</h2></div>;
 
   return (
     <div className="page-container fade-in" style={{ maxWidth: 900 }}>
-      <Link to="/legal-procedures" className="back-btn">← Back to Legal Procedures</Link>
-
-      {/* Header */}
-      <div style={{
-        background: 'linear-gradient(135deg, var(--secondary-bg), rgba(5,150,105,0.08))',
-        borderRadius: 20, padding: '32px 28px', marginBottom: 32,
-        border: '1px solid rgba(5,150,105,0.12)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-
-          <h1 style={{ fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: 800, letterSpacing: '-0.02em' }}>{procedure.title}</h1>
-        </div>
+      <Link to="/legal-procedures" className="back-btn">{L.back}</Link>
+      <div style={{ background: 'linear-gradient(135deg, var(--secondary-bg), rgba(5,150,105,0.08))', borderRadius: 20, padding: '32px 28px', marginBottom: 32, border: '1px solid rgba(5,150,105,0.12)' }}>
+        <h1 style={{ fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: 800 }}>{procedure.title}</h1>
       </div>
 
-      {/* Purpose */}
-      <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Purpose</h2>
-        <div className="card">
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8 }}>{procedure.purpose}</p>
-        </div>
-      </section>
+      <section style={{ marginBottom: 32 }}><h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>{L.purpose}</h2><div className="card"><p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8 }}>{procedure.purpose}</p></div></section>
 
-      {/* Quick Info Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 32 }}>
-        <div className="card" style={{ borderLeft: '4px solid var(--secondary)' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Fees</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--secondary)' }}>{procedure.fees}</div>
-        </div>
-        <div className="card" style={{ borderLeft: '4px solid var(--primary)' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Timeline</div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>{procedure.timeline}</div>
-        </div>
-        {procedure.officialLink && (
-          <a href={procedure.officialLink} target="_blank" rel="noopener noreferrer" className="card" style={{
-            borderLeft: '4px solid var(--accent)', textDecoration: 'none',
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Official Website</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', wordBreak: 'break-all' }}>{procedure.officialLink} ↗</div>
-          </a>
-        )}
+        <div className="card"><div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{L.fees}</div><div style={{ fontSize: 14, fontWeight: 700 }}>{procedure.fees}</div></div>
+        <div className="card"><div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{L.timeline}</div><div style={{ fontSize: 14, fontWeight: 700 }}>{procedure.timeline}</div></div>
+        {procedure.officialLink && <a href={procedure.officialLink} target="_blank" rel="noopener noreferrer" className="card" style={{ textDecoration: 'none' }}><div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{L.site}</div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', wordBreak: 'break-all' }}>{procedure.officialLink}</div></a>}
       </div>
 
-      {/* Required Documents */}
-      {procedure.requiredDocuments?.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Required Documents</h2>
-          <div className="card">
-            <ul style={{ listStyle: 'none', padding: 0 }}>
-              {procedure.requiredDocuments.map((doc, i) => (
-                <li key={i} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  padding: '10px 0',
-                  borderBottom: i < procedure.requiredDocuments.length - 1 ? '1px solid var(--border-light)' : 'none',
-                }}>
-                  <span style={{
-                    width: 22, height: 22, borderRadius: 6,
-                    background: 'var(--primary-bg)', color: 'var(--primary)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 700, flexShrink: 0,
-                  }}>✓</span>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{doc}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-      )}
-
-      {/* Step-by-Step Process */}
-      {procedure.steps?.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Step-by-Step Process</h2>
-          <div style={{ position: 'relative' }}>
-            {/* Vertical line */}
-            <div style={{
-              position: 'absolute', left: 17, top: 28, bottom: 28,
-              width: 2, background: 'linear-gradient(to bottom, var(--primary-light), var(--secondary))',
-              borderRadius: 2,
-            }} />
-            {procedure.steps.map((step, i) => (
-              <div key={i} className="fade-up" style={{
-                display: 'flex', gap: 16, marginBottom: 16,
-                animationDelay: `${i * 0.06}s`,
-              }}>
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--primary), var(--primary-light))',
-                  color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14, fontWeight: 800, flexShrink: 0, zIndex: 1,
-                  boxShadow: '0 2px 8px rgba(30,58,138,0.3)',
-                }}>{step.stepNumber}</div>
-                <div className="card" style={{ flex: 1, padding: '18px 20px' }}>
-                  <h4 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{step.title}</h4>
-                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{step.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Tips */}
-      {procedure.tips?.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>Important Tips</h2>
-          <div style={{
-            background: 'var(--accent-bg)', borderRadius: 16,
-            padding: '20px 24px', border: '1px solid rgba(217, 119, 6, 0.15)',
-          }}>
-            {procedure.tips.map((tip, i) => (
-              <div key={i} style={{
-                display: 'flex', gap: 10, alignItems: 'flex-start',
-                padding: '8px 0',
-                borderBottom: i < procedure.tips.length - 1 ? '1px solid rgba(217,119,6,0.1)' : 'none',
-              }}>
-                <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>•</span>
-                <span style={{ fontSize: 13, color: '#78350F', lineHeight: 1.6 }}>{tip}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {procedure.requiredDocuments?.length > 0 && <section style={{ marginBottom: 32 }}><h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{L.req}</h2><div className="card"><ul>{procedure.requiredDocuments.map((d, i) => <li key={i} style={{ marginBottom: 6 }}>{d}</li>)}</ul></div></section>}
+      {procedure.steps?.length > 0 && <section style={{ marginBottom: 32 }}><h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>{L.steps}</h2>{procedure.steps.map((s, i) => <div key={i} className="card" style={{ marginBottom: 10 }}><h4>{s.stepNumber}. {s.title}</h4><p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{s.description}</p></div>)}</section>}
+      {procedure.tips?.length > 0 && <section style={{ marginBottom: 32 }}><h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>{L.tips}</h2><div className="card"><ul>{procedure.tips.map((tip, i) => <li key={i} style={{ marginBottom: 6 }}>{tip}</li>)}</ul></div></section>}
     </div>
   );
 }
